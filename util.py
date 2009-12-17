@@ -1,9 +1,5 @@
-import zlib
-import cPickle
-from math import sqrt
 from Stemmer import Stemmer
-from numpy import dot, array
-from cStringIO import StringIO
+from numpy import dot, array, sqrt
 
 # Keep just one instance of this
 stemmer = Stemmer('english')
@@ -43,29 +39,8 @@ def stemWord(word):
 def norm(vector):
     return sqrt(dot(vector, vector.conj()))
 
-def encode_document(doc, factor=5):
-    """
-    Serialize and compress a document so we can use less memory
-    """
-
-    s = StringIO()
-    cPickle.dump(doc, s)
-    compressed_str = zlib.compress(s.getvalue(), factor)
-    return compressed_str
-
-def decode_document(compressed_str):
-    """
-    Decompress and deserialize a document
-    """
-
-    uncompressed_str = zlib.decompress(compressed_str)
-    s = StringIO(uncompressed_str)
-    doc = cPickle.load(s)
-    return doc
-
-
 @memoize2
-def distance(str1, str2):
+def distance(doc1, doc2):
     """ Calculate the distance between doc1 and doc2. Assume the documents are
     encoded (by encode_document).
 
@@ -73,9 +48,6 @@ def distance(str1, str2):
 
     dist = cos(d1, d2) = (d1 . d2) / ||d1|| ||d2||
     """
-
-    doc1 = decode_document(str1)
-    doc2 = decode_document(str2)
 
     assert isinstance(doc1, type(doc2)), \
            "objects type mismatch: %s and %s." % (type(doc1), type(doc2))
@@ -94,10 +66,10 @@ def calc_centroid(cluster):
     assert len(cluster) > 0
 
     c0 = cluster.pop()
-    res = sum((decode_document(d) for d in cluster), decode_document(c0)) / \
+    res = sum((d for d in cluster), c0) / \
             (len(cluster) + 1)
     cluster.add(c0)
-    return encode_document(res)
+    return res
 
 def normalize(doc, words, idf=True):
     """
@@ -111,17 +83,16 @@ def normalize(doc, words, idf=True):
         So parse all documents needed first.
     """
 
-    freq = doc.freq
     # Each term is weightened by the inverse document frequency in the
     # document collection
     if idf is True:
-        darray = array(map(lambda w: float(freq.get(w, 0)) / words[w],
+        darray = array(map(lambda w: float(doc.freq.get(w, 0)) / words[w],
             words.keys()))
     else:
-        darray = array(map(lambda w: float(freq.get(w, 0)), words.keys()))
+        darray = array(map(lambda w: float(doc.freq.get(w, 0)), words.keys()))
     # Normalize the vector
     darray /= norm(darray)
-    doc.char_vector = darray
+    return darray
 
 
 def get_clusters(centroids, data):

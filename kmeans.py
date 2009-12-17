@@ -51,7 +51,7 @@ class Kmeans(object):
     """
 
     def __init__(self, data, k, distfunc=None, centroidfunc=None,
-            chooser=choose_initial, tol=0.0005):
+            chooser=choose_initial, tol=0.000005):
         """
         The K-means algorithm
 
@@ -71,6 +71,7 @@ class Kmeans(object):
         assert data is not None, "data can't be None"
         assert k > 0, "number of clusters can't be 0 or negative"
 
+        print 'Kmeans: ', len(data), k
         self.centroids = chooser(data, k, distfunc)
 
         err = -1

@@ -9,6 +9,8 @@ from sys import stdout
 from parse import Parser
 from operator import itemgetter
 from kmeans import Kmeans, choose_initial, choose_initial_pp
+from guppy import hpy
+import util
 
 # Path to the directory containing the messages
 path = './cluster-txt/messages/'
@@ -26,8 +28,7 @@ def get_docs_frequencies(clusters):
     docs = []
     for c in clusters:
         freq = {}
-        for encoded_doc in c:
-            doc = decode_document(encoded_doc)
+        for doc in c:
             name = os.path.basename(split(r'-[0-9]+.txt$', doc.filename)[0])
             freq[name] = freq.get(name, 0) + 1
         docs.append(freq)
@@ -70,13 +71,19 @@ if __name__ == "__main__":
             stdout.flush()
             # Don't modify the original set
             for i, doc in enumerate(parser.docset):
-                normalize(doc, parser.words, idf)
-                parser.docset[i] = (encode_document(doc))
+                parser.docset[i].char_vector = normalize(doc, parser.words, idf)
             gc.collect()
             print 'done'
 
-            for chooser in choose_initial_pp, choose_initial:
-                for k in 10, 20, 30, 40:
+            h=hpy()
+            print h.heap()
+            
+            print 'Dimension: ', len(parser.docset[0].char_vector)
+            print 'Vector*1000: ', parser.docset[0].char_vector*1000
+            print 'Norm: ', util.norm(parser.docset[0].char_vector)
+            
+            for chooser in choose_initial, choose_initial_pp:
+                for k in [2,]:
                     errors = []
                     print '\nStemming words: %s' % stem
                     print 'Using IDF: %s' % idf
@@ -86,7 +93,7 @@ if __name__ == "__main__":
                     else:
                         print 'Chooser: plusplus'
                     stdout.flush()
-                    for _ in xrange(13):
+                    for _ in xrange(2):
                         kmeans = Kmeans(parser.docset, k, distance,
                                         calc_centroid, chooser)
                         clusters = get_clusters(kmeans.result(), parser.docset)
